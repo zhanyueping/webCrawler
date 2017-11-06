@@ -2,28 +2,28 @@
 '''
 Created on 2017年9月25日
 
-@author: BX
+@author: ZYP
 '''
-import pandas as pd
-import lxml.html
-from lxml import etree
-import re
-import urllib2 
-from selenium import webdriver
-import time
 from bs4 import BeautifulSoup 
-from selenium.webdriver.common.action_chains import ActionChains
+from lxml import etree
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+import lxml.html
+import pandas as pd
+import re
+import time
+import urllib2 
 import datetime
 try:
     from urllib.request import urlopen, Request
 except ImportError:
     from urllib2 import urlopen, Request,URLError
-
+import MySQLdb as mdb
 
 def eastMoneySecurityictWebScrapy():
     securityDict = {}
@@ -102,6 +102,7 @@ def eastMoneyWebScrapy(filePath):
     now = datetime.datetime.now()
     nowtime = now.strftime('%Y%m%d%H%M%S')
     nowtime = nowtime+"000"
+    date = time.strftime('%Y%m%d',time.localtime(time.time()))
     print  nowtime
     print url    
     try:
@@ -146,6 +147,10 @@ def eastMoneyWebScrapy(filePath):
                             continue
                         else:
                             if hotTopic is not None:
+                                filenew.write(date)
+                                filenew.write('\t')                                
+                                filenew.write(nowtime)
+                                filenew.write('\t')
                                 filenew.write(hotTopic)
                                 filenew.write('\t')
                                 filenew.write(str(discussionNumbers))
@@ -158,9 +163,7 @@ def eastMoneyWebScrapy(filePath):
                                 else:
                                     filenew.write("null")
                                     filenew.write('\t')
-                                filenew.write(lines_i)
-                                filenew.write('\t')
-                                filenew.write(nowtime)
+                                filenew.write(lines_i)                               
                                 filenew.write('\n')
                     hotTopic = None
                     discussionNumbers = 0
@@ -168,16 +171,55 @@ def eastMoneyWebScrapy(filePath):
         filenew.close()        
     except Exception,e:
         print e
-#     time.sleep(10000)
-#     browers.close()
 
-filePath = "D:\\ZYP\\hottopic.txt"
-eastMoneyWebScrapy(filePath)
-# filenew = open(filePath,"w")
-# securityID_name_dict = eastMoneySecurityictWebScrapy()
-# for i in securityID_name_dict:
-#     filenew.write(i)
-#     filenew.write("\t")
-#     filenew.write(securityID_name_dict[i])
-#     filenew.write('\n')
+def eastMoneyWebScrapyToFile():        
+        date = time.strftime('%Y%m%d',time.localtime(time.time()))
+        filePath = "D:\\ZYP\\hottopic"+date+".txt"
+        eastMoneyWebScrapy(filePath)
+        
+def fileToMysql():
+    date = time.strftime('%Y%m%d',time.localtime(time.time()))
+    filePath = "D:\\ZYP\\hottopic"+date+".txt"
+    file_to_read = open(filePath,'r')
+    line = file_to_read.readline()
+    dataline = [];
+    hottopic = [];
+    while line:
+        line = line.lstrip()
+        line = line.rstrip()
+        dataline = line.split("\t")
+        hottopic.append(dataline)
+    
+    config = {
+    'host': '127.0.0.1',
+    'port': 3306,
+    'user': 'root',
+    'passwd': '111111',
+    'db': 'hangqing_his',
+    'charset': 'utf8'
+    }
+    conn = mdb.connect(**config)
+    # 使用cursor()方法获取操作游标
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO t_md_hot_topic values(%s,%d,%s,%s,%s,%s,%s)',hottopic[0])
+        conn.commit()
+    except:
+        import traceback
+        traceback.print_exc()
+        # 发生错误时会滚
+        conn.rollback()
+    finally:
+        
+        # 关闭游标连接
+        cursor.close()
+        # 关闭数据库连接
+        conn.close()
+
+   
+   
+    
+if __name__ == '__main__':
+#     eastMoneyWebScrapyToFile()
+    fileToMysql()
 
